@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: write    # lets the workflow keep itself enabled
 
 jobs:
   generate:
@@ -21,6 +22,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python .github/snake/snake.py "${{ github.repository_owner }}" dist random
+
+      # GitHub pauses scheduled workflows after 60 days without repo activity.
+      # Re-enabling on every run resets that timer, so updates never stop.
+      - name: Keep schedule alive
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/snake.yml/enable"
 
       - uses: crazy-max/ghaction-github-pages@v4
         with:

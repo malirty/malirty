@@ -14,7 +14,9 @@ import urllib.request
 
 CELL, GAP = 11, 3
 STEP = CELL + GAP
-PAD_X, PAD_Y = 18, 14
+PAD_X, PAD_Y = 40, 46
+PAD_R, PAD_B = 18, 34
+MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
 STEP_TIME = 0.075          # seconds per cell
 SNAKE_LEN = 6
 
@@ -22,12 +24,12 @@ THEMES = {
     "dark": {
         "empty": "#161b22",
         "levels": ["#161b22", "#3b3220", "#6b5626", "#a8853a", "#E2B857"],
-        "head": "#F0D58C", "body": "#E2B857",
+        "head": "#F0D58C", "body": "#E2B857", "text": "#8b949e", "title": "#F0D58C",
     },
     "light": {
         "empty": "#ebedf0",
         "levels": ["#ebedf0", "#f3e3b5", "#e6c56f", "#c99a2e", "#9a7215"],
-        "head": "#9a7215", "body": "#b8892a",
+        "head": "#9a7215", "body": "#b8892a", "text": "#57606a", "title": "#9a7215",
     },
 }
 LEVEL = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2,
@@ -37,19 +39,26 @@ LEVEL = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2,
 # ---------------------------------------------------------------- data
 def fetch_grid(user):
     query = """query($u:String!){user(login:$u){contributionsCollection{
-      contributionCalendar{weeks{contributionDays{weekday contributionLevel}}}}}}"""
+      contributionCalendar{totalContributions weeks{contributionDays{weekday date contributionLevel}}}}}}"""
     req = urllib.request.Request(
         "https://api.github.com/graphql",
         data=json.dumps({"query": query, "variables": {"u": user}}).encode(),
         headers={"Authorization": "bearer " + os.environ["GITHUB_TOKEN"],
                  "Content-Type": "application/json"})
     data = json.load(urllib.request.urlopen(req))
-    weeks = data["data"]["user"]["contributionsCollection"]["contributionCalendar"]["weeks"]
-    grid = {}
+    cal = data["data"]["user"]["contributionsCollection"]["contributionCalendar"]
+    weeks = cal["weeks"]
+    grid, months, last = {}, [], None
     for x, w in enumerate(weeks):
         for d in w["contributionDays"]:
             grid[(x, d["weekday"])] = LEVEL[d["contributionLevel"]]
-    return grid, len(weeks)
+        m = int(w["contributionDays"][0]["date"][5:7])
+        if m != last:
+            months.append((x, MONTHS[m - 1]))
+            last = m
+    if len(months) > 1 and months[1][0] - months[0][0] < 3:
+        months.pop(0)                    # avoid overlapping labels on the left edge
+    return {"grid": grid, "months": months, "total": cal["totalContributions"]}, len(weeks)
 
 
 # ---------------------------------------------------------------- routes
@@ -169,7 +178,8 @@ def full_path(route, W, H):
 
 
 # ---------------------------------------------------------------- svg
-def render(grid, W, route, theme):
+def render(info, W, route, theme):
+    grid = info["grid"]
     th = THEMES[theme]
     path = full_path(route, W, 7)
     n = len(path)
@@ -212,18 +222,33 @@ def render(grid, W, route, theme):
                      f'height="{size:.2f}" rx="{size / 2.6:.2f}" fill="{color}" '
                      f'opacity="{op:.2f}" style="animation-delay:{k * STEP_TIME:.3f}s"/>')
 
-    width = PAD_X * 2 + W * STEP - GAP
-    height = PAD_Y * 2 + 7 * STEP - GAP
+    width = PAD_X + W * STEP - GAP + PAD_R
+    grid_bottom = PAD_Y + 7 * STEP - GAP
+    height = grid_bottom + PAD_B
+    font = "font-family:'Segoe UI',-apple-system,Ubuntu,sans-serif"
+    css.append(f"text{{{font};fill:{th['text']};font-size:11px}}"
+               f".ttl{{font-size:14px;font-weight:600;fill:{th['title']}}}")
+    labels = [f'<text class="ttl" x="{PAD_X}" y="18">{info["total"]} contributions in the last year</text>']
+    labels += [f'<text x="{PAD_X + x * STEP}" y="{PAD_Y - 7}">{name}</text>' for x, name in info["months"]]
+    labels += [f'<text x="{PAD_X - 8}" y="{PAD_Y + d * STEP + 9}" text-anchor="end">{n}</text>'
+               for d, n in ((1, "Mon"), (3, "Wed"), (5, "Fri"))]
+    lx = width - PAD_R - 5 * STEP - 30
+    ly = grid_bottom + 14
+    labels.append(f'<text x="{lx - 6}" y="{ly + 9}" text-anchor="end">Less</text>')
+    labels += [f'<rect x="{lx + i * STEP}" y="{ly}" width="{CELL}" height="{CELL}" rx="2.5" fill="{c}"/>'
+               for i, c in enumerate(th["levels"])]
+    labels.append(f'<text x="{lx + 5 * STEP + 4}" y="{ly + 9}">More</text>')
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
             f'viewBox="0 0 {width} {height}">\n<style>{"".join(css)}</style>\n'
-            + "\n".join(cells) + "\n" + "\n".join(snake) + "\n</svg>\n")
+            + "\n".join(labels) + "\n" + "\n".join(cells) + "\n" + "\n".join(snake) + "\n</svg>\n")
 
 
 def main():
     user, out = sys.argv[1], sys.argv[2]
     pick = sys.argv[3] if len(sys.argv) > 3 else "random"
     os.makedirs(out, exist_ok=True)
-    grid, W = fetch_grid(user)
+    info, W = fetch_grid(user)
+    grid = info["grid"]
     targets = [c for c, v in grid.items() if v > 0] or [(W // 2, 3)]
     routes = build_routes(W, 7, targets, seed=random.random())
 
@@ -231,14 +256,14 @@ def main():
         for name, r in routes.items():
             for theme in THEMES:
                 with open(f"{out}/snake-{name}-{theme}.svg", "w", encoding="utf-8") as f:
-                    f.write(render(grid, W, r, theme))
+                    f.write(render(info, W, r, theme))
         print("rendered", len(routes), "routes")
         return
 
     name = random.choice(list(routes)) if pick == "random" else pick
     for theme in THEMES:
         with open(f"{out}/snake-{theme}.svg", "w", encoding="utf-8") as f:
-            f.write(render(grid, W, routes[name], theme))
+            f.write(render(info, W, routes[name], theme))
     print("route:", name)
 
 
