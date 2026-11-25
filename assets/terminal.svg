@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="296" viewBox="0 0 840 296">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#161b22"/><stop offset="1" stop-color="#0b0e13"/></linearGradient>
+    <linearGradient id="gl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#E2B857" stop-opacity="0"/><stop offset=".5" stop-color="#E2B857"/><stop offset="1" stop-color="#E2B857" stop-opacity="0"/></linearGradient>
+  </defs>
+  <style>
+    text{font:500 15px 'Fira Code','JetBrains Mono',Consolas,monospace}
+    .cmd{fill:#e6edf3} .out{fill:#8b949e} .gold{fill:#F0D58C;font-weight:600} .p{fill:#E2B857}
+    .ttl{font:500 12px 'Segoe UI',sans-serif;fill:#6e7681}
+    .ln{opacity:0;animation:in .5s ease forwards}
+    @keyframes in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+    .cur{animation:blink 1s steps(1) infinite}
+    @keyframes blink{50%{opacity:0}}
+  </style>
+  <rect x=".5" y=".5" width="839" height="295" rx="14" fill="url(#bg)" stroke="#2a2f37"/>
+  <rect x="0" y="0" width="840" height="1.5" fill="url(#gl)"/>
+  <circle cx="26" cy="24" r="6" fill="#ff5f57"/><circle cx="46" cy="24" r="6" fill="#febc2e"/><circle cx="66" cy="24" r="6" fill="#28c840"/>
+  <text x="420" y="28" class="ttl" text-anchor="middle">malirty@github: ~</text>
+  <line x1="0" y1="44" x2="840" y2="44" stroke="#21262d"/>
+  <text x="28" y="78" class="cmd ln" style="animation-delay:0.40s"><tspan class="p">$ </tspan>whoami</text>
+  <text x="28" y="104" class="out ln" style="animation-delay:0.95s">malirty — developer who ships things people actually use</text>
+  <text x="28" y="130" class="cmd ln" style="animation-delay:1.50s"><tspan class="p">$ </tspan>cat focus.txt</text>
+  <text x="28" y="156" class="out ln" style="animation-delay:2.05s">→ Telegram bots &amp; AI agents that talk like humans</text>
+  <text x="28" y="182" class="out ln" style="animation-delay:2.60s">→ iOS &amp; desktop apps with obsessive attention to UI</text>
+  <text x="28" y="208" class="out ln" style="animation-delay:3.15s">→ automation: if I do it twice, I script it</text>
+  <text x="28" y="234" class="cmd ln" style="animation-delay:3.70s"><tspan class="p">$ </tspan>echo $STATUS</text>
+  <text x="28" y="260" class="gold ln" style="animation-delay:4.25s">building Feadgram · open to collaboration ✦</text>
+  <rect x="28" y="272" width="9" height="17" fill="#E2B857" class="cur"/>
+</svg>
