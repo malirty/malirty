@@ -20,6 +20,6 @@
   <text x="28" y="182" class="out" opacity="0"><animate attributeName="opacity" from="0" to="1" begin="2.60s" dur="0.5s" fill="freeze"/>→ iOS &amp; desktop apps with obsessive attention to UI</text>
   <text x="28" y="208" class="out" opacity="0"><animate attributeName="opacity" from="0" to="1" begin="3.15s" dur="0.5s" fill="freeze"/>→ automation: if I do it twice, I script it</text>
   <text x="28" y="234" class="cmd" opacity="0"><animate attributeName="opacity" from="0" to="1" begin="3.70s" dur="0.5s" fill="freeze"/><tspan class="p">$ </tspan>echo $STATUS</text>
-  <text x="28" y="260" class="gold" opacity="0"><animate attributeName="opacity" from="0" to="1" begin="4.25s" dur="0.5s" fill="freeze"/>building Feadgram · open to collaboration ✦</text>
+  <text x="28" y="260" class="gold" opacity="0"><animate attributeName="opacity" from="0" to="1" begin="4.25s" dur="0.5s" fill="freeze"/>building Feadgram · open to collaboration</text>
   <rect x="28" y="272" width="9" height="17" fill="#E2B857"><animate attributeName="opacity" values="1;0;1" keyTimes="0;0.5;1" calcMode="discrete" dur="1s" repeatCount="indefinite"/></rect>
 </svg>
