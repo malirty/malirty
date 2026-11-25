@@ -2,7 +2,7 @@ name: Generate snake
 
 on:
   schedule:
-    - cron: "0 */12 * * *"
+    - cron: "23 * * * *"   # every hour: a new random route
   workflow_dispatch:
   push:
     branches: [main]
@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: Platane/snk/svg-only@v3
-        with:
-          github_user_name: ${{ github.repository_owner }}
-          outputs: |
-            dist/snake-dark.svg?palette=github-dark&color_snake=#E2B857&color_dots=#161b22,#3b3220,#6b5626,#a8853a,#E2B857
-            dist/snake-light.svg?color_snake=#b8892a
+      - uses: actions/checkout@v4
+
+      - name: Draw snake (random route out of 10)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/snake/snake.py "${{ github.repository_owner }}" dist random
 
       - uses: crazy-max/ghaction-github-pages@v4
         with:

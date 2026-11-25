@@ -41,14 +41,6 @@
   <img src="./assets/ai-agent.svg" width="49%" alt="AI Agent for Telegram"/>
 </p>
 
-<p align="center"><img src="./assets/divider.svg" width="100%" alt=""/></p>
-
-<h3 align="center">Fun Corner</h3>
-
-<p align="center">
-  <img src="https://quotes-github-readme.vercel.app/api?type=horizontal&theme=dark&backgroundColor=0d1117&quoteColor=c9d1d9&authorColor=E2B857&symbolColor=E2B857" alt="dev quote"/>
-</p>
-
 <br/>
 
 <p align="center">
