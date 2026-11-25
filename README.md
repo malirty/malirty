@@ -11,7 +11,7 @@
 <br/>
 
 <p align="center">
-  <img src="./assets/terminal.svg" width="100%" alt="whoami terminal"/>
+  <img src="./assets/whoami.svg" width="100%" alt="whoami terminal"/>
 </p>
 
 <p align="center"><img src="./assets/divider.svg" width="100%" alt=""/></p>
