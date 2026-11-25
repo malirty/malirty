@@ -46,7 +46,7 @@
 <h3 align="center">Fun Corner</h3>
 
 <p align="center">
-  <img src="https://quotes-github-readme.vercel.app/api?type=horizontal&bgColor=%230d1117&quoteColor=%23c9d1d9&authorColor=%23E2B857&symbolColor=%23E2B857" alt="dev quote"/>
+  <img src="https://quotes-github-readme.vercel.app/api?type=horizontal&theme=dark&backgroundColor=0d1117&quoteColor=c9d1d9&authorColor=E2B857&symbolColor=E2B857" alt="dev quote"/>
 </p>
 
 <br/>
