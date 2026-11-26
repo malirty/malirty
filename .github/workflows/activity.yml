@@ -1,0 +1,48 @@
+name: Generate contribution activity
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: contribution-activity-output
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate from real GitHub contribution data
+        env:
+          # PROFILE_READ_TOKEN can be a classic PAT with read:user if private
+          # contribution totals are desired. The API response is validated;
+          # GitHub's public calendar is the fallback if access is denied.
+          GH_GRAPHQL_TOKEN: ${{ secrets.PROFILE_READ_TOKEN || github.token }}
+        run: python3 scripts/activity.py --user malirty --output dist
+
+      - name: Publish changed SVGs to output
+        shell: bash
+        run: |
+          git fetch origin output
+          git worktree add --detach output-work origin/output
+          cp dist/activity-dark.svg dist/activity-light.svg output-work/
+          cd output-work
+          git rm -f --ignore-unmatch snake-dark.svg snake-light.svg
+          git add activity-dark.svg activity-light.svg
+          if git diff --cached --quiet; then
+            echo 'Contribution graphics are already current.'
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'Update contribution activity graphics'
+          git push origin HEAD:output
