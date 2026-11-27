@@ -56,6 +56,7 @@ TOP = 57
 PERIOD = 45.0
 MAX_SNAKE_SEGMENTS = 11
 INITIAL_SNAKE_SEGMENTS = 3
+SNAKE_GAIT_PERIOD = 1.2
 
 
 def fetch_graphql(user: str) -> list[dict]:
@@ -246,6 +247,11 @@ def render(days: list[dict], theme: str) -> str:
         ".snake-window{animation:snake-visible 45s linear infinite}",
         keyframes("snake-visible", [(0, "opacity:1"), (14.8, "opacity:1"),
                                     (15, "opacity:0"), (45, "opacity:0")]),
+        f".snake-gait{{animation:snake-gait {SNAKE_GAIT_PERIOD:g}s ease-in-out infinite}}",
+        "@keyframes snake-gait{0%,100%{transform:scale(1) rotate(0deg)}"
+        "25%{transform:scale(1.03) rotate(-2deg)}"
+        "50%{transform:scale(1.08) rotate(2deg)}"
+        "75%{transform:scale(1.02) rotate(-1deg)}}",
     ]
     body = []
     for day in days:
@@ -330,7 +336,8 @@ def render(days: list[dict], theme: str) -> str:
             )
 
     # Three squares are visible from the first frame; later contributions
-    # unlock more of the translucent tail.
+    # unlock more of the translucent tail. A delayed square pulse travels
+    # from the head through the body while the snake crawls.
     contact_steps = sorted(contact.values())
     snake_count = min(MAX_SNAKE_SEGMENTS, len(contact_steps) + INITIAL_SNAKE_SEGMENTS)
     first_y = path[0][1]
@@ -375,10 +382,12 @@ def render(days: list[dict], theme: str) -> str:
         css.append(f".snake-piece{segment}{{animation:{animation}}}")
         size = max(2.8, 10 - .72 * segment)
         offset = -size / 2
+        gait_delay = 0 if segment == 0 else -(SNAKE_GAIT_PERIOD - .05 * segment)
         snake_parts.append(
-            f'<g class="{name}"><rect class="snake-piece{segment}" '
+            f'<g class="{name}"><g class="snake-gait" style="animation-delay:{gait_delay:.2f}s">'
+            f'<rect class="snake-piece{segment}" '
             f'x="{offset:.2f}" y="{offset:.2f}" width="{size:.2f}" height="{size:.2f}" '
-            f'rx="{min(1.8, size * .18):.2f}" fill="{th["snake"]}" opacity="0"/></g>'
+            f'rx="{min(1.8, size * .18):.2f}" fill="{th["snake"]}" opacity="0"/></g></g>'
         )
     snake = "".join(snake_parts)
 
