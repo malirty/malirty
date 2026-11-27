@@ -55,6 +55,7 @@ LEFT = 47
 TOP = 57
 PERIOD = 45.0
 MAX_SNAKE_SEGMENTS = 11
+INITIAL_SNAKE_SEGMENTS = 3
 
 
 def fetch_graphql(user: str) -> list[dict]:
@@ -175,11 +176,13 @@ def validate(days: list[dict]) -> list[dict]:
 def route(targets: set[tuple[int, int]], width: int) -> list[tuple[int, int]]:
     """Nearest real targets, linked by adjacent Manhattan grid steps."""
     if not targets:
-        return [(-2, 3), (width + 1, 3)]
+        return [(x, 3) for x in range(2, width + 2)]
     remaining = set(targets)
     start = min(remaining, key=lambda p: (p[0], p[1]))
-    pos = (-2, start[1])
+    # The head starts at column 2, leaving two visible squares behind it.
+    pos = (2, start[1])
     path = [pos]
+    remaining.discard(pos)
     while remaining:
         target = min(remaining, key=lambda p: (abs(p[0] - pos[0]) + abs(p[1] - pos[1]), p[0], p[1]))
         # Alternating axis order keeps long straight traversals from dominating.
@@ -257,7 +260,7 @@ def render(days: list[dict], theme: str) -> str:
         restore_start = 15.05 + rng.uniform(0, 4.45)
         restore_end = min(20.95, restore_start + rng.uniform(.35, 1.20))
         phase = rng.uniform(0, 1.0)
-        css.append(f".c{index}{{animation:v{index} 45s linear infinite,m{index} 45s linear infinite}}")
+        css.append(f".c{index}{{animation:v{index} 45s linear infinite,m{index} 45s ease-in-out infinite}}")
         css.append(keyframes(f"v{index}", [
             (0, "opacity:1"), (max(.001, eat - .015), "opacity:1"),
             (eat + .10, "opacity:0"), (15, "opacity:0"),
@@ -270,13 +273,13 @@ def render(days: list[dict], theme: str) -> str:
         ]))
         delay = rng.uniform(.05, .70)
         fall = rng.uniform(.85, 1.45)
-        drop = (6 - y) * STEP + rng.uniform(2, 7)
+        # Land below the bottom row while retaining room inside the viewBox.
+        drop = (6 - y) * STEP + rng.uniform(15, 22)
         impact = 21 + delay + fall
         rebound = impact + rng.uniform(.19, .31)
         settle = rebound + rng.uniform(.30, .45)
         return_start = 24.10 + rng.uniform(0, .45)
         return_end = 26.62 + rng.uniform(0, .25)
-        return_span = return_end - return_start
         rebound_y = drop - min(10, drop * .22)
         other_x, other_y = shuffled[index]
         dx, dy = (other_x - x) * STEP, (other_y - y) * STEP
@@ -287,9 +290,8 @@ def render(days: list[dict], theme: str) -> str:
             (impact, transform(0, drop, .94) + ";animation-timing-function:cubic-bezier(.08,.82,.24,1)"),
             (rebound, transform(0, rebound_y, 1.025) + ";animation-timing-function:cubic-bezier(.5,0,.9,.5)"),
             (settle, transform(0, drop - min(2, drop * .1)) + ";animation-timing-function:ease-in"),
-            (return_start, transform(0, drop) + ";animation-timing-function:cubic-bezier(.45,0,.72,.55)"),
-            (return_start + return_span * .28, transform(0, drop * .84) + ";animation-timing-function:cubic-bezier(.42,0,.25,1)"),
-            (return_start + return_span * .73, transform(0, drop * .15) + ";animation-timing-function:cubic-bezier(.18,.7,.28,1)"),
+            # One continuous ascent: zero velocity at both ends, fastest near the middle.
+            (return_start, transform(0, drop) + ";animation-timing-function:cubic-bezier(.65,0,.35,1)"),
             (return_end, transform()), (27, transform()),
             (33, transform()), (33 + shuffle_delay, transform()),
             (35.7 + shuffle_delay / 3, transform(dx, dy, .93)),
@@ -327,28 +329,37 @@ def render(days: list[dict], theme: str) -> str:
                 f'cx="{ox:.2f}" cy="{oy:.2f}" r="1.35" fill="{th["particle"]}" opacity="0"/></g>'
             )
 
-    # Each real contribution unlocks one more square in the body. The head
-    # also increases slightly in size while the snake traverses the grid.
+    # Three squares are visible from the first frame; later contributions
+    # unlock more of the translucent tail.
     contact_steps = sorted(contact.values())
-    snake_count = min(MAX_SNAKE_SEGMENTS, len(contact_steps) + 1)
+    snake_count = min(MAX_SNAKE_SEGMENTS, len(contact_steps) + INITIAL_SNAKE_SEGMENTS)
+    first_y = path[0][1]
+    trail = [(-1, first_y), (0, first_y), (1, first_y)] + path
     snake_parts = []
     for segment in range(snake_count - 1, -1, -1):
         name = f"snake-move{segment}"
         css.append(f".{name}{{animation:{name} 45s linear infinite}}")
         frames = []
         for i in range(len(path)):
-            x, y = path[max(0, i - segment)]
+            x, y = trail[max(0, INITIAL_SNAKE_SEGMENTS + i - segment)]
             t = 14.45 * i / max(1, len(path) - 1)
             frames.append((t, transform(LEFT + x * STEP + 5, TOP + y * STEP + 5)))
         frames.append((45, frames[-1][1]))
         css.append(keyframes(name, frames))
         grow = f"snake-grow{segment}"
-        opacity = max(.58, 1 - segment * .042)
         if segment == 0:
-            growth_frames = [(0, "opacity:1"), (14.8, "opacity:1"),
+            opacity = 1.0
+        elif segment == 1:
+            opacity = .55
+        else:
+            opacity = max(.08, .30 * .83 ** (segment - 2))
+        if segment < INITIAL_SNAKE_SEGMENTS:
+            growth_frames = [(0, f"opacity:{opacity:.3f}"),
+                             (14.8, f"opacity:{opacity:.3f}"),
                              (15, "opacity:0"), (45, "opacity:0")]
         else:
-            unlock = 14.45 * contact_steps[segment - 1] / max(1, len(path) - 1)
+            unlock = 14.45 * contact_steps[segment - INITIAL_SNAKE_SEGMENTS] / max(1, len(path) - 1)
+            unlock = max(.01, unlock)
             growth_frames = [(0, "opacity:0"), (unlock, "opacity:0"),
                              (min(unlock + .18, 14.75), f"opacity:{opacity:.3f}"),
                              (14.8, f"opacity:{opacity:.3f}"),
@@ -357,14 +368,17 @@ def render(days: list[dict], theme: str) -> str:
         animation = f"{grow} 45s ease-out infinite"
         if segment == 0:
             css.append(keyframes("snake-head-size", [
-                (0, "transform:scale(.88)"), (14.45, "transform:scale(1.16)"),
-                (15, "transform:scale(.88)"), (45, "transform:scale(.88)"),
+                (0, "transform:scale(1)"), (14.45, "transform:scale(1.16)"),
+                (15, "transform:scale(1)"), (45, "transform:scale(1)"),
             ]))
             animation += ",snake-head-size 45s ease-in-out infinite"
         css.append(f".snake-piece{segment}{{animation:{animation}}}")
+        size = max(2.8, 10 - .72 * segment)
+        offset = -size / 2
         snake_parts.append(
-            f'<g class="{name}"><rect class="snake-piece{segment}" x="-5" y="-5" '
-            f'width="10" height="10" rx="1.8" fill="{th["snake"]}" opacity="0"/></g>'
+            f'<g class="{name}"><rect class="snake-piece{segment}" '
+            f'x="{offset:.2f}" y="{offset:.2f}" width="{size:.2f}" height="{size:.2f}" '
+            f'rx="{min(1.8, size * .18):.2f}" fill="{th["snake"]}" opacity="0"/></g>'
         )
     snake = "".join(snake_parts)
 
