@@ -54,6 +54,7 @@ STEP = 13
 LEFT = 47
 TOP = 57
 PERIOD = 45.0
+MAX_SNAKE_SEGMENTS = 11
 
 
 def fetch_graphql(user: str) -> list[dict]:
@@ -267,17 +268,29 @@ def render(days: list[dict], theme: str) -> str:
             (42 + phase, "opacity:1"), (43.5 + phase / 2, "opacity:.90"),
             (45, "opacity:1"),
         ]))
-        delay = rng.uniform(.05, .95)
-        fall = rng.uniform(.85, 1.60)
+        delay = rng.uniform(.05, .70)
+        fall = rng.uniform(.85, 1.45)
         drop = (6 - y) * STEP + rng.uniform(2, 7)
+        impact = 21 + delay + fall
+        rebound = impact + rng.uniform(.19, .31)
+        settle = rebound + rng.uniform(.30, .45)
+        return_start = 24.10 + rng.uniform(0, .45)
+        return_end = 26.62 + rng.uniform(0, .25)
+        return_span = return_end - return_start
+        rebound_y = drop - min(10, drop * .22)
         other_x, other_y = shuffled[index]
         dx, dy = (other_x - x) * STEP, (other_y - y) * STEP
         shuffle_delay = rng.uniform(0, .75)
         css.append(keyframes(f"m{index}", [
-            (0, transform()), (21 + delay, transform()),
-            (21 + delay + fall, transform(0, drop, .96)),
-            (21 + delay + fall + .25, transform(0, drop - 7, 1.03)),
-            (24.8, transform(0, drop - 2)), (27, transform()),
+            (0, transform()),
+            (21 + delay, transform() + ";animation-timing-function:cubic-bezier(.55,.02,.95,.55)"),
+            (impact, transform(0, drop, .94) + ";animation-timing-function:cubic-bezier(.08,.82,.24,1)"),
+            (rebound, transform(0, rebound_y, 1.025) + ";animation-timing-function:cubic-bezier(.5,0,.9,.5)"),
+            (settle, transform(0, drop - min(2, drop * .1)) + ";animation-timing-function:ease-in"),
+            (return_start, transform(0, drop) + ";animation-timing-function:cubic-bezier(.45,0,.72,.55)"),
+            (return_start + return_span * .28, transform(0, drop * .84) + ";animation-timing-function:cubic-bezier(.42,0,.25,1)"),
+            (return_start + return_span * .73, transform(0, drop * .15) + ";animation-timing-function:cubic-bezier(.18,.7,.28,1)"),
+            (return_end, transform()), (27, transform()),
             (33, transform()), (33 + shuffle_delay, transform()),
             (35.7 + shuffle_delay / 3, transform(dx, dy, .93)),
             (36.8, transform(dx, dy, .93)), (39, transform()),
@@ -314,8 +327,13 @@ def render(days: list[dict], theme: str) -> str:
                 f'cx="{ox:.2f}" cy="{oy:.2f}" r="1.35" fill="{th["particle"]}" opacity="0"/></g>'
             )
 
-    for segment in range(4):
-        name = f"snake{segment}"
+    # Each real contribution unlocks one more square in the body. The head
+    # also increases slightly in size while the snake traverses the grid.
+    contact_steps = sorted(contact.values())
+    snake_count = min(MAX_SNAKE_SEGMENTS, len(contact_steps) + 1)
+    snake_parts = []
+    for segment in range(snake_count - 1, -1, -1):
+        name = f"snake-move{segment}"
         css.append(f".{name}{{animation:{name} 45s linear infinite}}")
         frames = []
         for i in range(len(path)):
@@ -324,11 +342,31 @@ def render(days: list[dict], theme: str) -> str:
             frames.append((t, transform(LEFT + x * STEP + 5, TOP + y * STEP + 5)))
         frames.append((45, frames[-1][1]))
         css.append(keyframes(name, frames))
-    snake = "".join(
-        f'<circle class="snake{segment}" cx="0" cy="0" r="{4.6-segment*.65:.2f}" '
-        f'fill="{th["snake"]}" opacity="{1-segment*.22:.2f}"/>'
-        for segment in range(3, -1, -1)
-    )
+        grow = f"snake-grow{segment}"
+        opacity = max(.58, 1 - segment * .042)
+        if segment == 0:
+            growth_frames = [(0, "opacity:1"), (14.8, "opacity:1"),
+                             (15, "opacity:0"), (45, "opacity:0")]
+        else:
+            unlock = 14.45 * contact_steps[segment - 1] / max(1, len(path) - 1)
+            growth_frames = [(0, "opacity:0"), (unlock, "opacity:0"),
+                             (min(unlock + .18, 14.75), f"opacity:{opacity:.3f}"),
+                             (14.8, f"opacity:{opacity:.3f}"),
+                             (15, "opacity:0"), (45, "opacity:0")]
+        css.append(keyframes(grow, growth_frames))
+        animation = f"{grow} 45s ease-out infinite"
+        if segment == 0:
+            css.append(keyframes("snake-head-size", [
+                (0, "transform:scale(.88)"), (14.45, "transform:scale(1.16)"),
+                (15, "transform:scale(.88)"), (45, "transform:scale(.88)"),
+            ]))
+            animation += ",snake-head-size 45s ease-in-out infinite"
+        css.append(f".snake-piece{segment}{{animation:{animation}}}")
+        snake_parts.append(
+            f'<g class="{name}"><rect class="snake-piece{segment}" x="-5" y="-5" '
+            f'width="10" height="10" rx="1.8" fill="{th["snake"]}" opacity="0"/></g>'
+        )
+    snake = "".join(snake_parts)
 
     months = []
     previous_month = None
